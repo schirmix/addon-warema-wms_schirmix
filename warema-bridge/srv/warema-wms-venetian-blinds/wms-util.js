@@ -134,9 +134,13 @@ function encodeCmd(cmd, snr, params) {
                 log.error("wmsUtil: blindMoveToPos: ang undefined. Assuming 0.");
                 params.ang = 0;
             }
+            if (params.val === undefined) {
+                log.error("wmsUtil: blindMoveToPos: val undefined. Assuming 0.");
+                params.val = 0;
+            }
             ret.expect.msgType = "blindMoveToPosResponse";
             ret.expect.snr = snrHex;
-            ret.cmd = '{R06' + snrHex + '7070' + '03' + wmsPosPercentToHex(params.pos) + wmsAnglePercentToHex(params.ang) + 'FFFF}'; //no idea how valance works
+            ret.cmd = '{R06' + snrHex + '7070' + '03' + wmsPosPercentToHex(params.pos) + wmsAnglePercentToHex(params.ang) + wmsValPercentToHex(params.val) + "FF" + '}';
             break;
         case "blindStopMove":
             ret.cmd = '{R06' + snrHex + "7070" + "01" + "FF" + "FF" + "FFFF00}";
@@ -234,7 +238,7 @@ function decodeStickCmd(rcv) {
                         msgType = "position";
                         params.position = wmsPosHexToPercent(payload.substr(8, 2));
                         params.angle = wmsAngleHexToPercent(payload.substr(10, 2));
-                        params.valance_1 = payload.substr(12, 2);
+                        params.valance_1 = wmsValHexToPercent(payload.substr(12, 2));
                         params.valance_2 = payload.substr(14, 2);
                         params.moving = !(payload.substr(16, 2) === '00');
                         break;
@@ -257,7 +261,7 @@ function decodeStickCmd(rcv) {
                 params.unknown1 = payload.substr(0, 10);
                 params.prevPosition = wmsPosHexToPercent(payload.substr(10, 2));
                 params.prevAngle = wmsAngleHexToPercent(payload.substr(12, 2));
-                params.prevValance_1 = payload.substr(14, 2);
+                params.prevValance_1 = wmsValHexToPercent(payload.substr(14, 2));
                 params.prevValance_2 = payload.substr(16, 2);
                 params.unknown2 = payload.substr(18, 8);
                 break;
@@ -285,7 +289,6 @@ function decodeStickCmd(rcv) {
                         params.second = parseInt(payload.substr(18, 2), 16);
                         params.day_of_week = parseInt(payload.substr(20, 2), 16);
                         params.unknown = payload.substr(22);
-                        break;
                         break;
                 }
                 break;
@@ -355,7 +358,7 @@ function decodeStickCmd(rcv) {
                 params.unknown = payload.substr(0, 2);
                 params.position = wmsPosHexToPercent(payload.substr(2, 2));
                 params.angle = wmsAngleHexToPercent(payload.substr(4, 2));
-                params.valance_1 = payload.substr(6, 2);
+                params.valance_1 = wmsValHexToPercent(payload.substr(6, 2));
                 params.valance_2 = payload.substr(8, 2);
                 break;
             case '8010':
@@ -397,4 +400,13 @@ function wmsPosPercentToHex(posPercent) {
 }
 
 //--------------------------------------------------------------------------------------------------
+function wmsValHexToPercent(posHex) {
+    return Math.round(parseInt(posHex, 16) / 2);
+}
 
+//--------------------------------------------------------------------------------------------------
+function wmsValPercentToHex(posPercent) {
+    return ('0' + (Math.min(Math.max(posPercent, 0), 100) * 2).toString(16)).substr(-2).toUpperCase();
+}
+
+//--------------------------------------------------------------------------------------------------
