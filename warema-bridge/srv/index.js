@@ -173,11 +173,12 @@ function registerDevice(element) {
                     ...base_device,
                     model: model
                 },
-                position_open: 0,
-                position_closed: 100,
+                position_open: 100,
+                position_closed: 0,
                 state_topic: 'warema/' + element.snr + '/state',
                 command_topic: 'warema/' + element.snr + '/set',
                 position_topic: 'warema/' + element.snr + '/position',
+                valance_1_topic: 'warema/' + element.snr + '/valance_1',
                 set_position_topic: 'warema/' + element.snr + '/set_position',
             }
 
@@ -252,13 +253,17 @@ function callback(err, msg) {
                     client.publish('warema/' + msg.payload.snr + '/position', '' + msg.payload.position, {retain: true})
 
                     if (msg.payload.moving === false) {
-                        if (msg.payload.position === 0)
+                        if (msg.payload.position === 100)
                             client.publish('warema/' + msg.payload.snr + '/state', 'open', {retain: true});
-                        else if (msg.payload.position === 100)
+                        else if (msg.payload.position === 0)
                             client.publish('warema/' + msg.payload.snr + '/state', 'closed', {retain: true});
                         else
                             client.publish('warema/' + msg.payload.snr + '/state', 'stopped', {retain: true});
                     }
+                }
+                if (typeof msg.payload.valance_1 !== "undefined") {
+                    devices[msg.payload.snr].valance_1 = msg.payload.valance_1;
+                    client.publish('warema/' + msg.payload.snr + '/valance_1', '' + msg.payload.valance_1, {retain: true})
                 }
                 if (typeof msg.payload.tilt !== "undefined") {
                     devices[msg.payload.snr].tilt = msg.payload.tilt;
@@ -336,12 +341,12 @@ client.on('message', function (topic, message) {
                     break;
                 case 'CLOSE':
                     log.debug('Closing ' + device);
-                    stickUsb.vnBlindSetPosition(device, 100)
+                    stickUsb.vnBlindSetPosition(device, 0, parseInt(devices[device]['angle']), 0)
                     client.publish('warema/' + device + '/state', 'closing');
                     break;
                 case 'OPEN':
                     log.debug('Opening ' + device);
-                    stickUsb.vnBlindSetPosition(device, 0);
+                    stickUsb.vnBlindSetPosition(device, 100, parseInt(devices[device]['angle']), 33);
                     client.publish('warema/' + device + '/state', 'opening');
                     break;
                 case 'STOP':
@@ -351,12 +356,18 @@ client.on('message', function (topic, message) {
             }
             break;
         case 'set_position':
-            log.debug('Setting ' + device + ' to ' + message + '%, angle ' + devices[device].angle);
-            stickUsb.vnBlindSetPosition(device, parseInt(message), parseInt(devices[device]['angle']))
+            if (!isNaN(message)) {
+                log.debug('Setting ' + device + ' to ' + message + '%, angle ' + devices[device].angle + ', ' + 'valance_1 ' + devices[device].valance_1);
+                stickUsb.vnBlindSetPosition(device, parseInt(message), parseInt(devices[device]['angle']), parseInt(devices[device]['valance_1']))
+            } else {
+                const pos = JSON.parse(message);
+                log.debug('Setting ' + device + ' to position ' + pos.awn + '% and valance ' + pos.val + '%, angle ' + devices[device].angle);
+                stickUsb.vnBlindSetPosition(device, parseInt(pos.awn), parseInt(devices[device]['angle']), parseInt(pos.val))
+            }
             break;
         case 'set_tilt':
-            log.debug('Setting ' + device + ' to ' + message + '°, position ' + devices[device].position);
-            stickUsb.vnBlindSetPosition(device, parseInt(devices[device]['position']), parseInt(message))
+            log.debug('Setting ' + device + ' to ' + message + '°, position ' + devices[device].position + 'valance_1 ' + devices[device].valance_1);
+            stickUsb.vnBlindSetPosition(device, parseInt(devices[device]['position']), parseInt(message), parseInt(devices[device]['valance_1']))
             break;
         default:
             log.info('Unrecognised command from HA')
