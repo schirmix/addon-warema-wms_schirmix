@@ -20,4 +20,3 @@ WmsVbStickUsb.listWmsStickSerialPorts(function (err, msg) {
         console.log("finished.");
     }
 });
-
