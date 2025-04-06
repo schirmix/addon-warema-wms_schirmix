@@ -1,4 +1,4 @@
-d# addon-warema-wms
+# addon-warema-wms Modified
 Modified test.
 This Home Assistant addon allows to control Warema WMS equipment.
 In order to use this addon you'll need a Warema WMS stick (https://www.warema.com/en/control-systems/radio-systems/supplementary-components/)
